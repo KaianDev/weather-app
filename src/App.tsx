@@ -1,6 +1,5 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { LucideSearch } from "lucide-react";
-import axios from "axios";
 
 import ErrorMessage from "./components/ErrorMessage";
 import ResultFetch from "./components/ResultFetch";
@@ -8,8 +7,12 @@ import Loading from "./components/Loading";
 import Button from "./components/Button";
 import Input from "./components/Input";
 import { type City } from "./types/city";
+import { getWeatherInfos } from "./data/api";
+import PreLoading from "./components/PreLoading";
+import Footer from "./components/Footer";
 
 const App = () => {
+  const [preLoading, setPreLoading] = useState(true);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [city, setCity] = useState<City | null>();
@@ -18,20 +21,22 @@ const App = () => {
     message: "",
   });
 
+  useEffect(() => {
+    setTimeout(() => {
+      setPreLoading(false);
+    }, 2000);
+  }, []);
+
   const handleSearchCity = async (e: FormEvent) => {
-    if (input === "") return;
     e.preventDefault();
+    if (input === "") return;
     setLoading(true);
     setCity(null);
     try {
-      const response = await axios.get(
-        `https://api.openweathermap.org/data/2.5/weather?q=${encodeURI(
-          input
-        )}&appid=b63f570375ef3f971314293d60afb0a0&units=metric&lang=pt_br`
-      );
+      const response = await getWeatherInfos(input);
       setTimeout(() => {
         setInput("");
-        setCity(response.data);
+        setCity(response);
         setLoading(false);
       }, 1000);
     } catch (error) {
@@ -44,28 +49,32 @@ const App = () => {
     }
   };
 
-  return (
-    <main className="flex-1 w-full bg-gradient-to-b from-sky-700 via-sky-500 to-sky-50">
-      <div className="max-w-xl mx-auto px-6 space-y-3">
-        <h1 className="text-3xl text-center p-6 text-sky-100">
-          Previsão do Tempo
-        </h1>
-        <form className="w-full bg-white p-6 rounded-md shadow-md border border-white flex space-x-2">
-          <Input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onClick={() => setError({ status: false, message: "" })}
-          />
-          <Button onClick={handleSearchCity} disabled={input.trim() === ""}>
-            <LucideSearch />
-          </Button>
-        </form>
-        {error.status && <ErrorMessage message={error.message} />}
-        {loading && <Loading />}
-        {city && <ResultFetch city={city} />}
+  if (preLoading) return <PreLoading />;
+
+  if (!preLoading)
+    return (
+      <div className="min-h-dvh flex flex-col w-full bg-gradient-to-b from-sky-700 via-sky-500 to-sky-50  duration-500">
+        <div className="max-w-xl w-full mx-auto px-6 space-y-3 flex-1">
+          <h1 className="text-3xl text-center p-6 text-sky-100">
+            Previsão do Tempo
+          </h1>
+          <form className="w-full bg-white p-6 rounded-md shadow-md border border-white flex space-x-2">
+            <Input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onClick={() => setError({ status: false, message: "" })}
+            />
+            <Button onClick={handleSearchCity} disabled={input.trim() === ""}>
+              <LucideSearch />
+            </Button>
+          </form>
+          {error.status && <ErrorMessage message={error.message} />}
+          {loading && <Loading />}
+          {city && <ResultFetch city={city} />}
+        </div>
+        <Footer />
       </div>
-    </main>
-  );
+    );
 };
 
 export default App;
